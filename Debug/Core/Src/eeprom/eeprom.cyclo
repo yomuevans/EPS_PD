@@ -1,0 +1,5 @@
+../Core/Src/eeprom/eeprom.c:26:19:EEPROM_Init	2
+../Core/Src/eeprom/eeprom.c:49:19:EEPROM_WriteTelemetry	2
+../Core/Src/eeprom/eeprom.c:74:19:EEPROM_ReadTelemetry	3
+../Core/Src/eeprom/eeprom.c:104:19:EEPROM_WriteParameters	4
+../Core/Src/eeprom/eeprom.c:133:19:EEPROM_ReadParameters	5

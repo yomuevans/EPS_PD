@@ -1,0 +1,4 @@
+../Core/Src/ssp/ssp_comm.c:33:19:SSP_SendFrame	72	static,ignoring_inline_asm
+../Core/Src/ssp/ssp_comm.c:68:19:SSP_ReceiveFrame	88	static,ignoring_inline_asm
+../Core/Src/ssp/ssp_comm.c:108:6:SSP_UART_RxCpltCallback	16	static
+../Core/Src/ssp/ssp_comm.c:119:6:SSP_UART_TxCpltCallback	16	static

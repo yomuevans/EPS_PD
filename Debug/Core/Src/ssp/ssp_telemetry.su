@@ -1,0 +1,4 @@
+../Core/Src/ssp/ssp_telemetry.c:86:13:SelectMultiplexerChannel	16	static
+../Core/Src/ssp/ssp_telemetry.c:99:6:SSP_UpdateTelemetryAndParameters	24	static
+../Core/Src/ssp/ssp_telemetry.c:190:16:SSP_GetTelemetry	4	static
+../Core/Src/ssp/ssp_telemetry.c:195:16:SSP_GetParameters	16	static

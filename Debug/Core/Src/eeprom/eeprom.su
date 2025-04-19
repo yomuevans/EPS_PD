@@ -1,0 +1,5 @@
+../Core/Src/eeprom/eeprom.c:26:19:EEPROM_Init	40	static
+../Core/Src/eeprom/eeprom.c:49:19:EEPROM_WriteTelemetry	40	static
+../Core/Src/eeprom/eeprom.c:74:19:EEPROM_ReadTelemetry	40	static
+../Core/Src/eeprom/eeprom.c:104:19:EEPROM_WriteParameters	104	static
+../Core/Src/eeprom/eeprom.c:133:19:EEPROM_ReadParameters	104	static

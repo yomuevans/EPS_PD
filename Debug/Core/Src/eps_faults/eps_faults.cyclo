@@ -1,0 +1,3 @@
+../Core/Src/eps_faults/eps_faults.c:34:6:LogFault	3
+../Core/Src/eps_faults/eps_faults.c:59:6:HandleFaults	46
+../Core/Src/eps_faults/eps_faults.c:131:6:PollFaults	37
