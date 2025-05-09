@@ -6,7 +6,28 @@
 FaultLogEntry fault_log[MAX_FAULT_LOGS];
 uint8_t fault_log_index = 0;
 volatile bool fault_detected = false;
+/*
+Each FaultState has three fields:
 
+1. is_active (boolean):
+
+true means the fault is currently happening.
+
+false means there's no fault or the fault was cleared.
+
+
+
+2. retry_count (integer):
+
+Counts how many times the system has tried to fix (or reset) the fault.
+
+
+
+3. last_fault_time (timestamp):
+
+Records the last time the fault was detected or a retry was attempted.
+
+*/
 // Fault states for polling and retry tracking
 typedef struct {
     bool is_active;
