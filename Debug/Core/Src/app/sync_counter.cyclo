@@ -1,0 +1,6 @@
+../Core/Src/app/sync_counter.c:10:6:SyncCounter_Init	1
+../Core/Src/app/sync_counter.c:29:6:SyncPulse_IRQHandler	2
+../Core/Src/app/sync_counter.c:39:6:SetSyncCounter	1
+../Core/Src/app/sync_counter.c:48:10:GetSyncCounter	1
+../Core/Src/app/sync_counter.c:57:10:GetSubtickUs	1
+../Core/Src/app/sync_counter.c:62:6:GetSyncTimestamp	1

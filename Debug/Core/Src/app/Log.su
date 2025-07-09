@@ -1,0 +1,4 @@
+../Core/Src/app/Log.c:24:6:EPS_Log_SetLevel	16	static
+../Core/Src/app/Log.c:28:6:EPS_Log_Message	316	static
+../Core/Src/app/Log.c:52:6:EPS_Log_Telemetry	32	static
+../Core/Src/app/Log.c:59:6:EPS_Log_ParameterDump	24	static

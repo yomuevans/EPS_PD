@@ -1,0 +1,5 @@
+../Core/Src/app/eeprom.c:17:19:epspd_Init	40	static
+../Core/Src/app/eeprom.c:49:19:epspd_WriteTelemetry	48	static
+../Core/Src/app/eeprom.c:114:19:epspd_ReadTelemetry	184	static
+../Core/Src/app/eeprom.c:164:19:epspd_WriteParameters	112	static
+../Core/Src/app/eeprom.c:207:19:epspd_ReadParameters	112	static

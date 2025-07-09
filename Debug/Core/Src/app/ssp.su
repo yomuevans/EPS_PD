@@ -1,0 +1,11 @@
+../Core/Src/app/ssp.c:37:24:SSP_GetRxBuffer	16	static
+../Core/Src/app/ssp.c:57:6:SSP_Init	24	static
+../Core/Src/app/ssp.c:95:10:SSP_CalculateCRC	24	static
+../Core/Src/app/ssp.c:130:19:SSP_SendCommand	288	static
+../Core/Src/app/ssp.c:199:19:SSP_ReceiveCommand	288	static
+../Core/Src/app/ssp.c:279:6:SSP_ProcessCommand	616	static,ignoring_inline_asm
+../Core/Src/app/ssp.c:596:6:HAL_UART_TxCpltCallback	24	static
+../Core/Src/app/ssp.c:616:6:HAL_UART_ErrorCallback	24	static
+../Core/Src/app/ssp.c:636:10:SSP_GetCRCErrors	4	static
+../Core/Src/app/ssp.c:648:10:SSP_GetFramingErrors	4	static
+../Core/Src/app/ssp.c:660:6:SSP_ResetErrorCounters	4	static

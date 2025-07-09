@@ -1,0 +1,4 @@
+../Core/Src/app/fault.c:44:6:EPS_LogFault	2
+../Core/Src/app/fault.c:64:6:Fault_PollAndHandle	13
+../Core/Src/app/fault.c:108:19:EPS_ReadFaultLog	3
+../Core/Src/app/fault.c:120:9:EPS_GetFaultLogCount	1

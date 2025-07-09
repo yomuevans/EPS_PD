@@ -1,0 +1,4 @@
+../Core/Src/app/telemetry.c:73:13:SelectMultiplexerChannel	16	static
+../Core/Src/app/telemetry.c:92:6:EPSPD_UpdateTelemetryAndParameters	72	static
+../Core/Src/app/telemetry.c:216:18:EPSPD_GetTelemetry	4	static
+../Core/Src/app/telemetry.c:230:18:EPSPD_GetParameters	16	static

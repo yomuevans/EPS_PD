@@ -1,0 +1,2 @@
+../Core/Src/app/i2c_comm.c:23:9:EPS_I2C_CRC8	4
+../Core/Src/app/i2c_comm.c:55:19:EPS_I2C_SendCommand	4

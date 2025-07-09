@@ -1,0 +1,2 @@
+../Core/Src/app/i2c_comm.c:23:9:EPS_I2C_CRC8	24	static
+../Core/Src/app/i2c_comm.c:55:19:EPS_I2C_SendCommand	304	static

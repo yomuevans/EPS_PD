@@ -1,0 +1,3 @@
+../Core/Src/app/delay.c:13:20:software_delay_start	16	static
+../Core/Src/app/delay.c:18:23:software_delay_elapsed	24	static
+../Core/Src/app/delay.c:23:6:SoftwareDelay	24	static
