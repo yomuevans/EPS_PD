@@ -1,4 +1,4 @@
-../Core/Src/app/telemetry.c:73:13:SelectMultiplexerChannel	1
-../Core/Src/app/telemetry.c:92:6:EPSPD_UpdateTelemetryAndParameters	1
-../Core/Src/app/telemetry.c:216:18:EPSPD_GetTelemetry	1
-../Core/Src/app/telemetry.c:230:18:EPSPD_GetParameters	1
+../Core/Src/app/telemetry.c:74:13:SelectMultiplexerChannel	1
+../Core/Src/app/telemetry.c:93:6:EPSPD_UpdateTelemetryAndParameters	1
+../Core/Src/app/telemetry.c:217:18:EPSPD_GetTelemetry	1
+../Core/Src/app/telemetry.c:231:18:EPSPD_GetParameters	1

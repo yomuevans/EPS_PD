@@ -311,8 +311,6 @@ HAL_StatusTypeDef SatelliteModes_ConfigurePowerLines(SatelliteMode_t mode) {
 //     charge/discharge control), critical for controlling subsystem power. Called by ssp.c for SSP_CMD_SON/SOF.
 // Function:
 HAL_StatusTypeDef SatelliteModes_SwitchPowerLine(PowerLineID_t pwrl_id, GPIO_PinState state) {
-    // Get the current sync counter for timestamping BMS commands
-    uint64_t sync_counter = GetSyncCounter();
 
     // Switch based on the power line ID
     switch (pwrl_id) {
@@ -353,39 +351,6 @@ HAL_StatusTypeDef SatelliteModes_SwitchPowerLine(PowerLineID_t pwrl_id, GPIO_Pin
         case PWRL_ID_15:
             // Enable/disable 3.3V UHF power line
             HAL_GPIO_WritePin(UHF_EN_GPIO_Port, UHF_EN_Pin, state); break;
-
-        // EPS_BMS-controlled devices (via I2C commands)
-        case PWRL_ID_HEATER_1:
-        {
-            // Select BMS command based on state (on or off)
-            uint8_t cmd = (state == GPIO_PIN_SET) ? BMS_CMD_HEATER1_ON : BMS_CMD_HEATER1_OFF;
-            // Send command to BMS via I2C with sync counter
-            return EPS_I2C_SendCommand(&hi2c2, cmd, NULL, 0, NULL, 0, sync_counter);
-        }
-
-        case PWRL_ID_HEATER_2:
-        {
-            // Select BMS command for Heater 2
-            uint8_t cmd = (state == GPIO_PIN_SET) ? BMS_CMD_HEATER2_ON : BMS_CMD_HEATER2_OFF;
-            // Send command to BMS via I2C
-            return EPS_I2C_SendCommand(&hi2c2, cmd, NULL, 0, NULL, 0, sync_counter);
-        }
-
-        case PWRL_ID_CHARGE_CTRL:
-        {
-            // Select BMS command for charge control
-            uint8_t cmd = (state == GPIO_PIN_SET) ? BMS_CMD_CHARGE_EN : BMS_CMD_CHARGE_DIS;
-            // Send command to BMS via I2C
-            return EPS_I2C_SendCommand(&hi2c2, cmd, NULL, 0, NULL, 0, sync_counter);
-        }
-
-        case PWRL_ID_DISCHG_CTRL:
-        {
-            // Select BMS command for discharge control
-            uint8_t cmd = (state == GPIO_PIN_SET) ? BMS_CMD_DISCHARGE_EN : BMS_CMD_DISCHARGE_DIS;
-            // Send command to BMS via I2C
-            return EPS_I2C_SendCommand(&hi2c2, cmd, NULL, 0, NULL, 0, sync_counter);
-        }
 
         // Reserved or invalid power line IDs
         case PWRL_ID_0:

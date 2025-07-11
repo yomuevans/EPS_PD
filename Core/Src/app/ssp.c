@@ -18,6 +18,7 @@ static DMA_HandleTypeDef *ssp_dma_tx2; // Pointer to DMA handle for UART3 transm
 static DMA_HandleTypeDef *ssp_dma_rx2; // Pointer to DMA handle for UART3 receive
 static I2C_HandleTypeDef *ssp_i2c;     // Pointer to I2C handle (likely I2C2 or I2C3) for EEPROM and BMS communication
 
+
 // Declare global buffers for receiving SSP frames via UART DMA
 static uint8_t rx_buffer1[SSP_MAX_DATA_LEN + SSP_FRAME_OVERHEAD]; // Buffer for UART2 receive (size includes data + frame overhead)
 static uint8_t rx_buffer2[SSP_MAX_DATA_LEN + SSP_FRAME_OVERHEAD]; // Buffer for UART3 receive (size includes data + frame overhead)
@@ -519,11 +520,9 @@ void SSP_ProcessCommand(SSP_Frame_t *frame) {
             uint8_t bms_data[64];
             // Initialize BMS telemetry length
             uint8_t bms_len = 0;
-            // Get the current sync counter for timestamping
-            uint64_t counter = GetSyncCounter();
 
             // Request BMS telemetry using I2C
-            if (EPS_I2C_RequestBMSTelemetry(ssp_i2c, EPS_BMS_I2C_ADDR, counter, bms_data, &bms_len) == HAL_OK) {
+            if (EPS_I2C_RequestBMSTelemetry(ssp_i2c, EPS_BMS_I2C_ADDR, bms_data, &bms_len) == HAL_OK) {
                 // Set reply command to GD
                 reply.cmd = SSP_CMD_GD;
                 // Set data length to BMS telemetry length
@@ -565,14 +564,36 @@ void SSP_ProcessCommand(SSP_Frame_t *frame) {
         break;
 
         case SSP_CMD_KEN: // Keep-alive enable command
-            // Reply with the command code
-            reply.data[0] = SSP_CMD_KEN;
-            break;
+        {
 
-        case SSP_CMD_KDIS: // Keep-alive disable command
-            // Reply with the command code
-            reply.data[0] = SSP_CMD_KDIS;
+        	extern I2C_HandleTypeDef hi2c3;
+            HAL_StatusTypeDef status = EPS_I2C_SendCommand(&hi2c3, CMD_DISABLE_CHARGING,
+                                                           NULL, 0, NULL, 0, I2C_SLAVE_ADDR_BMS);
+
+            if (status == HAL_OK) {
+                reply.data[0] = SSP_CMD_KEN; // Echo back command
+            } else {
+                reply.data[0] = 0xFF; // NACK or error indicator
+                EPS_Log_Message(EPS_LOG_ERROR, "SSP_CMD_KEN: Failed to disable charging\n");
+            }
             break;
+        }
+
+        case SSP_CMD_KDIS: // Kill Disable – resume charging only
+        {
+        	extern I2C_HandleTypeDef hi2c3;
+            HAL_StatusTypeDef status = EPS_I2C_SendCommand(&hi2c3, CMD_ENABLE_CHARGING,
+                                                           NULL, 0, NULL, 0, I2C_SLAVE_ADDR_BMS);
+
+            if (status == HAL_OK) {
+                reply.data[0] = SSP_CMD_KDIS;  // Echo back command as ACK
+                EPS_Log_Message(EPS_LOG_INFO, "SSP_CMD_KDIS: Charging re-enabled");
+            } else {
+                reply.data[0] = 0xFF;  // Indicate failure
+                EPS_Log_Message(EPS_LOG_ERROR, "SSP_CMD_KDIS: Failed to re-enable charging");
+            }
+            break;
+        }
 
         default: // Unknown command
             // Send NACK for unrecognized command

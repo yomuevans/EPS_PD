@@ -6,6 +6,8 @@
 #include "ssp.h"
 #include "eeprom.h"
 #include "Log.h"
+#include "i2c_comm.h"
+#include <stdbool.h>
 
 // Define the interval for saving telemetry to EEPROM (60 seconds)
 #define EEPROM_SAVE_INTERVAL 60000 // Save every 60 seconds (60000 milliseconds)
@@ -13,22 +15,16 @@
 // Declare a flag to indicate when ADC conversion is complete
 volatile uint8_t adc_ready = 0; // Volatile ensures the compiler doesn’t optimize this variable
 
-
-
 ADC_HandleTypeDef hadc1;
-
 I2C_HandleTypeDef hi2c2;
 DMA_HandleTypeDef hdma_i2c2_rx;
 DMA_HandleTypeDef hdma_i2c2_tx;
-
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi3;
-
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
-
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
@@ -37,23 +33,30 @@ DMA_HandleTypeDef hdma_usart2_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 DMA_HandleTypeDef hdma_usart3_rx;
 
+
+volatile bool sync_pulse_triggered = false;
+
 osThreadId_t NormalTaskHandle;
 const osThreadAttr_t NormalTask_attributes = {
   .name = "NormalTask",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-
 osThreadId_t FaultTask02Handle;
 const osThreadAttr_t FaultTask02_attributes = {
   .name = "FaultTask02",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-
 osThreadId_t SSPmasterTask03Handle;
 const osThreadAttr_t SSPmasterTask03_attributes = {
   .name = "SSPmasterTask03",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+osThreadId_t SyncTask04Handle;
+const osThreadAttr_t SyncTask04_attributes = {
+  .name = "SyncTask04",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
@@ -75,61 +78,96 @@ static void MX_TIM4_Init(void);
 void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
 void StartTask03(void *argument);
+void StartTask04(void *argument);
 
 int main(void)
 {
-    // Initialize the STM32 HAL library (sets up interrupts, clocks, etc.)
-    HAL_Init();
-    // Configure the system clock to 8 MHz using HSE oscillator
-    SystemClock_Config();
-    // Initialize GPIO pins for power enables (e.g., RS5V_EN) and fault signals
-    MX_GPIO_Init();
-    // Initialize DMA for UART2 and UART3
-    MX_DMA_Init();
-    // Initialize UART2 for SSP communication (RS485 mode)
-    MX_USART2_UART_Init();
-    // Initialize UART3 for additional communication (RS485 mode)
-    MX_USART3_UART_Init();
-    // Initialize UART1 for error logging
-    MX_USART1_UART_Init();
-    // Initialize ADC1 for measuring power rail voltages
-    MX_ADC1_Init();
-    // Initialize I2C2 for subsystem communication (e.g., with BMS)
-    MX_I2C2_Init();
-    // Initialize SPI1 for subsystem communication (slave mode)
-    MX_SPI1_Init();
-    // Initialize SPI3 for additional communication (slave mode)
-    MX_SPI3_Init();
-    // Initialize Timer 1 for timing tasks
-    MX_TIM1_Init();
-    // Initialize Timer 2 for system tick (1ms)
-    MX_TIM2_Init();
-    // Initialize Timer 3 for additional timing
-    MX_TIM3_Init();
-    // Initialize Timer 4 for additional timing
-    MX_TIM4_Init();
+  HAL_Init();
+  SystemClock_Config();
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_USART2_UART_Init();
+  MX_USART3_UART_Init();
+  MX_USART1_UART_Init();
+  MX_ADC1_Init();
+  MX_I2C2_Init();
+  MX_SPI1_Init();
+  MX_SPI3_Init();
+  MX_TIM1_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
 
-    // Initialize SSP with UART and I2C handles for communication
-    SSP_Init(&huart2, &huart3, &hdma_usart2_tx, &hdma_usart2_rx, &hdma_usart3_tx, &hdma_usart3_rx, &hi2c2);
-
-
-  // Start TIM2 for subtick timestamping
-  HAL_TIM_Base_Start(&htim2);
-
-
-  // Initialize subsystems
-  SyncCounter_Init();
   osKernelInitialize();
 
   NormalTaskHandle = osThreadNew(StartDefaultTask, NULL, &NormalTask_attributes);
   FaultTask02Handle = osThreadNew(StartTask02, NULL, &FaultTask02_attributes);
   SSPmasterTask03Handle = osThreadNew(StartTask03, NULL, &SSPmasterTask03_attributes);
+  SyncTask04Handle = osThreadNew(StartTask04, NULL, &SyncTask04_attributes);
 
   osKernelStart();
 
-  while (1)
+  while(1)
   {
   }
+}
+
+
+void StartDefaultTask(void *argument)
+{
+    for (;;) {
+        uint16_t adc_values[16] = {0};
+        uint32_t last_save_time = 0;
+        adc_ready = 0;
+        EPS_Log_Message(EPS_LOG_INFO, "Starting ADC conversion via DMA for telemetry update");
+        HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_values, 16);
+        while (!adc_ready) {
+            EPS_Log_Message(EPS_LOG_WARNING, "Waiting for ADC DMA complete flag...");
+        }
+        EPSPD_UpdateTelemetryAndParameters(&hi2c2, adc_values);
+        EPS_Log_Message(EPS_LOG_INFO, "Telemetry updated from ADC values");
+
+        if (HAL_GetTick() - last_save_time >= EEPROM_SAVE_INTERVAL) {
+            last_save_time = HAL_GetTick();
+            EPS_Log_Message(EPS_LOG_INFO, "Saving telemetry to EEPROM");
+        }
+        osDelay(1000);
+    }
+}
+
+void StartTask02(void *argument)
+{
+    for (;;) {
+        EPS_Log_Message(EPS_LOG_VERBOSE, "Polling faults from GPIO and subsystems");
+        Fault_PollAndHandle(&hi2c2, &huart1);
+        osDelay(100);
+    }
+}
+
+void StartTask03(void *argument)
+{
+    for (;;) {
+        EPS_Log_Message(EPS_LOG_VERBOSE, "Polling for SSP commands from OBC");
+        osDelay(10000); // Poll every 10 seconds
+    }
+}
+
+void StartTask04(void *argument)
+{
+    for (;;) {
+        if (sync_pulse_triggered) {
+            sync_pulse_triggered = false;
+
+            uint64_t counter = GetSyncCounter();
+            HAL_StatusTypeDef status = EPS_I2C_SendSyncCounter(&hi2c2, counter, I2C_SLAVE_ADDR_BMS);
+
+            if (status != HAL_OK) {
+                EPS_Log_Message(EPS_LOG_ERROR, "Failed to send sync counter");
+            }
+        }
+
+        osDelay(5);
+    }
 }
 
 void SystemClock_Config(void)
@@ -137,7 +175,7 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
+  if(HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -146,7 +184,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
@@ -158,7 +196,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
   {
     Error_Handler();
   }
@@ -184,13 +222,13 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc1.Init.OversamplingMode = DISABLE;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  if(HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
   }
 
   multimode.Mode = ADC_MODE_INDEPENDENT;
-  if (HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode) != HAL_OK)
+  if(HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode) != HAL_OK)
   {
     Error_Handler();
   }
@@ -201,7 +239,7 @@ static void MX_ADC1_Init(void)
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  if(HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -218,17 +256,17 @@ static void MX_I2C2_Init(void)
   hi2c2.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
   hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
   hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+  if(HAL_I2C_Init(&hi2c2) != HAL_OK)
   {
     Error_Handler();
   }
 
-  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c2, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  if(HAL_I2CEx_ConfigAnalogFilter(&hi2c2, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
   {
     Error_Handler();
   }
 
-  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c2, 0) != HAL_OK)
+  if(HAL_I2CEx_ConfigDigitalFilter(&hi2c2, 0) != HAL_OK)
   {
     Error_Handler();
   }
@@ -249,7 +287,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CRCPolynomial = 7;
   hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
   hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
-  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  if(HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -270,7 +308,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CRCPolynomial = 7;
   hspi3.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
   hspi3.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
-  if (HAL_SPI_Init(&hspi3) != HAL_OK)
+  if(HAL_SPI_Init(&hspi3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -288,19 +326,19 @@ static void MX_TIM1_Init(void)
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  if(HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  if(HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  if(HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -317,18 +355,18 @@ static void MX_TIM2_Init(void)
   htim2.Init.Period = 4294967295;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  if(HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  if(HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  if(HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -345,18 +383,18 @@ static void MX_TIM3_Init(void)
   htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  if(HAL_TIM_Base_Init(&htim3) != HAL_OK)
   {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  if(HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  if(HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -373,18 +411,18 @@ static void MX_TIM4_Init(void)
   htim4.Init.Period = 65535;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  if(HAL_TIM_Base_Init(&htim4) != HAL_OK)
   {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  if(HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  if(HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -402,7 +440,7 @@ static void MX_USART1_UART_Init(void)
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
   huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
+  if(HAL_UART_Init(&huart1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -420,7 +458,7 @@ static void MX_USART2_UART_Init(void)
   huart2.Init.OverSampling = UART_OVERSAMPLING_16;
   huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_RS485Ex_Init(&huart2, UART_DE_POLARITY_HIGH, 0, 0) != HAL_OK)
+  if(HAL_RS485Ex_Init(&huart2, UART_DE_POLARITY_HIGH, 0, 0) != HAL_OK)
   {
     Error_Handler();
   }
@@ -438,7 +476,7 @@ static void MX_USART3_UART_Init(void)
   huart3.Init.OverSampling = UART_OVERSAMPLING_16;
   huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_RS485Ex_Init(&huart3, UART_DE_POLARITY_HIGH, 0, 0) != HAL_OK)
+  if(HAL_RS485Ex_Init(&huart3, UART_DE_POLARITY_HIGH, 0, 0) != HAL_OK)
   {
     Error_Handler();
   }
@@ -554,59 +592,20 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 }
 
-void StartDefaultTask(void *argument)
+
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  for (;;) {
-	  // Array to store ADC values for 16 channels (e.g., voltages for 5V, 12V rails)
-	uint16_t adc_values[16] = {0};
-
-	      // Variable to track the last time telemetry was saved
-	uint32_t last_save_time = 0;
-	  // Reset ADC ready flag before starting conversion
-	adc_ready = 0;
-	  // Start ADC conversion with DMA for 16 channels
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_values, 16);
-
-	  // Wait for ADC conversion to complete (sets adc_ready = 1)
-	while (!adc_ready); // Blocking wait (consider adding a timeout for safety)
-
-	  // Update telemetry with ADC values (e.g., power rail voltages)
-	EPSPD_UpdateTelemetryAndParameters(&hi2c2, adc_values);
-	// Check if it’s time to save telemetry to EEPROM (every 60 seconds)
-	if (HAL_GetTick() - last_save_time >= EEPROM_SAVE_INTERVAL) {
-		last_save_time = HAL_GetTick(); // Update last save time
-
-	}
-    osDelay(1000); // 1 Hz telemetry update
+  if(htim->Instance == TIM6)
+  {
+    HAL_IncTick();
   }
 }
-
-void StartFaultTask(void *argument)
-{
-  for (;;) {
-	Fault_PollAndHandle(&hi2c2, &huart1);
-    osDelay(100); // Check faults at 10 Hz
-  }
-}
-
-void StartSSPTask(void *argument)
-{
-  for (;;) {
-    //SSP_HandleCommands(); // Blocking or polling depending on SSP
-    osDelay(1);
-  }
-}
-
-//// ISR for sync pulse EXTI
-//void EXTI1_IRQHandler(void)
-//{
-//    SyncPulse_IRQHandler();
-//}
 
 void Error_Handler(void)
 {
   __disable_irq();
-  while (1)
+  while(1)
   {
   }
 }

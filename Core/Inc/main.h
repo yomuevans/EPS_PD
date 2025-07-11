@@ -12,6 +12,7 @@ extern "C" {
 #include "telemetry.h"
 #include "eeprom.h"
 
+extern I2C_HandleTypeDef hi2c3;
 
 
 
@@ -177,8 +178,10 @@ void Error_Handler(void);
 #define SA2_I_GPIO_Port        GPIOA
 #define SA3_I_Pin              GPIO_PIN_2
 #define SA3_I_GPIO_Port        GPIOA
+#define SYNC_PULSE_TASK_DELAY_MS 10 //
 
 
+#include "log.h"
 
 #ifdef __cplusplus
 }

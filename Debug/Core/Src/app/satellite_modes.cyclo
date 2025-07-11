@@ -3,4 +3,4 @@
 ../Core/Src/app/satellite_modes.c:114:17:SatelliteModes_GetMode	1
 ../Core/Src/app/satellite_modes.c:127:13:SatelliteModes_GetModeString	10
 ../Core/Src/app/satellite_modes.c:152:19:SatelliteModes_ConfigurePowerLines	10
-../Core/Src/app/satellite_modes.c:313:19:SatelliteModes_SwitchPowerLine	21
+../Core/Src/app/satellite_modes.c:313:19:SatelliteModes_SwitchPowerLine	13

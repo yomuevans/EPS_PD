@@ -1,5 +1,9 @@
 #include "sync_counter.h"
 #include "main.h" // For GPIO and TIM2 access
+#include "i2c_comm.h" // For EPS_I2C_SendSyncCounter
+#include <stdbool.h>
+extern volatile bool sync_pulse_triggered;
+
 
 // Global sync counter state
 static SyncCounter_t sync_counter = {
@@ -28,12 +32,16 @@ void SyncCounter_Init(void) {
 // resetting the subtick at the pulse event for interval tracking.
 void SyncPulse_IRQHandler(void) {
     if (__HAL_GPIO_EXTI_GET_IT(SYNC_PULSE_Pin) != RESET) {
-        __HAL_GPIO_EXTI_CLEAR_IT(SYNC_PULSE_Pin); // Clear first to prevent re-entry
+        __HAL_GPIO_EXTI_CLEAR_IT(SYNC_PULSE_Pin);
         sync_counter.sync_counter++;
         sync_counter.subtick_us = 0;
-        __HAL_TIM_SET_COUNTER(&htim2, 0); // Reset TIM2 for next subtick
+        __HAL_TIM_SET_COUNTER(&htim2, 0);
+
+        sync_pulse_triggered = true;  // Set flag for deferred I2C transmission
     }
 }
+
+
 
 // Set sync counter to a new value
 void SetSyncCounter(uint64_t val) {

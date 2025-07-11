@@ -1,2 +1,3 @@
-../Core/Src/app/i2c_comm.c:23:9:EPS_I2C_CRC8	24	static
-../Core/Src/app/i2c_comm.c:55:19:EPS_I2C_SendCommand	304	static
+../Core/Src/app/i2c_comm.c:17:9:EPS_I2C_CRC8	24	static
+../Core/Src/app/i2c_comm.c:28:19:EPS_I2C_SendCommand	312	static
+../Core/Src/app/i2c_comm.c:53:19:EPS_I2C_SendSyncCounter	48	static

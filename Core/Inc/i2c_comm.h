@@ -21,6 +21,7 @@ extern "C" {
 #define BMS_CMD_CHARGE_DIS        0xA5
 #define BMS_CMD_DISCHARGE_EN      0xA6
 #define BMS_CMD_DISCHARGE_DIS     0xA7
+#define CMD_SYNC_COUNTER      0x01
 
 
 typedef enum {
@@ -35,19 +36,23 @@ typedef enum {
     CMD_DISABLE_DISCHARGING  = 0x23,
 } EPS_I2C_CommandCode_t;
 
-HAL_StatusTypeDef EPS_I2C_SendCommand(I2C_HandleTypeDef *hi2c, uint8_t cmd,
+HAL_StatusTypeDef EPS_I2C_SendCommand(I2C_HandleTypeDef *hi2c,
+                                      uint8_t cmd,
                                       uint8_t *tx_data, uint8_t tx_len,
                                       uint8_t *rx_data, uint8_t rx_len,
-                                      uint64_t sync_counter);
+                                      uint16_t i2c_slave_addr);
 
 HAL_StatusTypeDef EPS_I2C_RequestBMSTelemetry(I2C_HandleTypeDef *hi2c,
                                               uint8_t bms_addr,
-                                              uint64_t sync_counter,
                                               uint8_t *out_buffer,
                                               uint8_t *out_len);
 
 // CRC-8/MAXIM (Dallas/1-Wire, polynomial 0x31)
 uint8_t EPS_I2C_CRC8(const uint8_t *data, uint8_t len);
+
+HAL_StatusTypeDef EPS_I2C_SendSyncCounter(I2C_HandleTypeDef *hi2c,
+										   uint64_t sync_counter,
+										   uint16_t i2c_slave_addr);
 
 #ifdef __cplusplus
 }

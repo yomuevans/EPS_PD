@@ -37,8 +37,8 @@ Core/Src/app/satellite_modes.o: ../Core/Src/app/satellite_modes.c \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h \
  ../Core/Inc/i2c_comm.h ../Core/Inc/sync_counter.h ../Core/Inc/main.h \
  ../Core/Inc/ssp.h ../Core/Inc/main.h ../Core/Inc/satellite_modes.h \
- ../Core/Inc/telemetry.h ../Core/Inc/eeprom.h ../Core/Inc/i2c_comm.h \
- ../Core/Inc/sync_counter.h
+ ../Core/Inc/telemetry.h ../Core/Inc/eeprom.h ../Core/Inc/log.h \
+ ../Core/Inc/i2c_comm.h ../Core/Inc/sync_counter.h
 ../Core/Inc/satellite_modes.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
 ../Core/Inc/stm32l4xx_hal_conf.h:
@@ -83,5 +83,6 @@ Core/Src/app/satellite_modes.o: ../Core/Src/app/satellite_modes.c \
 ../Core/Inc/satellite_modes.h:
 ../Core/Inc/telemetry.h:
 ../Core/Inc/eeprom.h:
+../Core/Inc/log.h:
 ../Core/Inc/i2c_comm.h:
 ../Core/Inc/sync_counter.h:

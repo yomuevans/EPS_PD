@@ -10,14 +10,15 @@
 #define ADC_VREF_MV 3300      // ADC reference voltage (3.3V, 3300mV)
 #define ADC_MAX_COUNT 4096    // Maximum ADC count for 12-bit resolution (2^12 = 4096)
 #define VOLTAGE_PER_COUNT (ADC_VREF_MV / (float)ADC_MAX_COUNT) // Voltage per ADC count (3300mV / 4096 ≈ 0.8057mV)
-#define VOLTAGE_SCALING_FACTOR 7.297 // Scaling factor for voltage measurements (e.g., for solar arrays)
-#define CURRENT_SCALING_FACTOR 0.161  // Scaling factor for current measurements
+#define VOLTAGE_SCALING_FACTOR 9.26446 // Scaling factor for voltage measurements (e.g., for solar arrays)
+#define CURRENT_SCALING_FACTOR 0.16117  // Scaling factor for current measurements
 #define IMON_K_ILM 656               // Current monitor gain constant (in µA/V)
 #define R_IMON 464                   // Current monitor resistor (464 ohms)
 #define IMON_CURRENT_PER_VOLT (1000.0 / (R_IMON * IMON_K_ILM * 1e-6)) // Current per volt (mA/V)
 #define CURRENT_PER_COUNT (VOLTAGE_PER_COUNT / 0.1) // Current per ADC count (using 0.1Ω shunt resistor)
 #define SHUNT_RESISTOR_OHMS 0.1    // Shunt resistor value for current measurements (0.1 ohms)
-
+#define SHUNT_RESISTOR_OHMS 0.1
+#define ZXCT_GAIN 50.0f
 
 
 

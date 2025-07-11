@@ -1,5 +1,6 @@
-../Core/Src/app/eeprom.c:17:19:epspd_Init	2
-../Core/Src/app/eeprom.c:49:19:epspd_WriteTelemetry	2
-../Core/Src/app/eeprom.c:114:19:epspd_ReadTelemetry	3
-../Core/Src/app/eeprom.c:164:19:epspd_WriteParameters	4
-../Core/Src/app/eeprom.c:207:19:epspd_ReadParameters	5
+../Core/Src/app/eeprom.c:21:6:acquire_eeprom_lock	6
+../Core/Src/app/eeprom.c:59:6:release_eeprom_lock	1
+../Core/Src/app/eeprom.c:71:6:check_and_clear_stale_lock	3
+../Core/Src/app/eeprom.c:86:13:verify_write_success	4
+../Core/Src/app/eeprom.c:101:19:epspd_Init	2
+../Core/Src/app/eeprom.c:115:19:epspd_WriteTelemetry	4
