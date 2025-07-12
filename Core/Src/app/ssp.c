@@ -516,31 +516,32 @@ void SSP_ProcessCommand(SSP_Frame_t *frame) {
                 SSP_SendCommand(huart, hdma_tx, &reply);
             }
             // Request BMS telemetry over I2C
-            // Declare a buffer for BMS telemetry (up to 64 bytes)
-            uint8_t bms_data[64];
-            // Initialize BMS telemetry length
-            uint8_t bms_len = 0;
+            uint8_t bms_rx[BMS_MAX_PAYLOAD_LEN];   // Maximum 253-byte payload
+            uint8_t bms_rx_len = sizeof(bms_rx);
 
-            // Request BMS telemetry using I2C
-            if (EPS_I2C_RequestBMSTelemetry(ssp_i2c, EPS_BMS_I2C_ADDR, bms_data, &bms_len) == HAL_OK) {
-                // Set reply command to GD
+            // Transmit CMD_READ_TELEMETRY, expect response
+            if (EPS_I2C_TransmitReceiveWithRetry(ssp_i2c,
+                                                 CMD_GET_TELEMETRY,
+                                                 NULL, 0,  // No TX payload
+                                                 bms_rx, &bms_rx_len,
+                                                 EPS_BMS_I2C_ADDR) == HAL_OK)
+            {
+                // Build the SSP reply with BMS telemetry data
                 reply.cmd = SSP_CMD_GD;
-                // Set data length to BMS telemetry length
-                reply.len = bms_len;
-                // Copy BMS telemetry to reply
-                memcpy(reply.data, bms_data, bms_len);
-                // Send the BMS telemetry reply
+                reply.len = bms_rx_len;
+                memcpy(reply.data, bms_rx, bms_rx_len);
                 SSP_SendCommand(huart, hdma_tx, &reply);
-            } else {
-                // If BMS request fails, send NACK
+            }
+            else
+            {
+                // If BMS I2C read fails after retries, send NACK
                 reply.cmd = SSP_CMD_NACK;
                 reply.len = 1;
                 reply.data[0] = frame->cmd;
-                // Send the NACK reply
                 SSP_SendCommand(huart, hdma_tx, &reply);
-                // Exit the case to avoid sending fault logs
-                break;
+                break;  // Abort this switch case path
             }
+
 
             // Get the number of fault logs stored in EEPROM
             uint8_t count = EPS_GetFaultLogCount();

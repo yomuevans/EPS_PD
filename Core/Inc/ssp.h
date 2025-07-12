@@ -31,6 +31,7 @@ extern "C" {
 #define SSP_MAX_DATA_LEN 248 // Max data size = 256 - 8 bytes overhead
 #define SSP_FRAME_OVERHEAD 8 // DEST, SRC, CMD, D_Len, CRC (2), End Flag
 #define SSP_GD_BLOCK_SIZE 32 // Example block size (adjust as needed)
+#define BMS_MAX_PAYLOAD_LEN 253
 
 typedef struct {
     uint8_t module_addr;      // Subsystem module address

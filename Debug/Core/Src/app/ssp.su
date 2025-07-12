@@ -3,9 +3,9 @@
 ../Core/Src/app/ssp.c:96:10:SSP_CalculateCRC	24	static
 ../Core/Src/app/ssp.c:131:19:SSP_SendCommand	288	static
 ../Core/Src/app/ssp.c:200:19:SSP_ReceiveCommand	288	static
-../Core/Src/app/ssp.c:280:6:SSP_ProcessCommand	624	static,ignoring_inline_asm
-../Core/Src/app/ssp.c:617:6:HAL_UART_TxCpltCallback	24	static
-../Core/Src/app/ssp.c:637:6:HAL_UART_ErrorCallback	24	static
-../Core/Src/app/ssp.c:657:10:SSP_GetCRCErrors	4	static
-../Core/Src/app/ssp.c:669:10:SSP_GetFramingErrors	4	static
-../Core/Src/app/ssp.c:681:6:SSP_ResetErrorCounters	4	static
+../Core/Src/app/ssp.c:280:6:SSP_ProcessCommand	808	static,ignoring_inline_asm
+../Core/Src/app/ssp.c:618:6:HAL_UART_TxCpltCallback	24	static
+../Core/Src/app/ssp.c:638:6:HAL_UART_ErrorCallback	24	static
+../Core/Src/app/ssp.c:658:10:SSP_GetCRCErrors	4	static
+../Core/Src/app/ssp.c:670:10:SSP_GetFramingErrors	4	static
+../Core/Src/app/ssp.c:682:6:SSP_ResetErrorCounters	4	static

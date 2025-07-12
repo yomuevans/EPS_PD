@@ -36,16 +36,13 @@ typedef enum {
     CMD_DISABLE_DISCHARGING  = 0x23,
 } EPS_I2C_CommandCode_t;
 
-HAL_StatusTypeDef EPS_I2C_SendCommand(I2C_HandleTypeDef *hi2c,
-                                      uint8_t cmd,
-                                      uint8_t *tx_data, uint8_t tx_len,
-                                      uint8_t *rx_data, uint8_t rx_len,
-                                      uint16_t i2c_slave_addr);
+HAL_StatusTypeDef EPS_I2C_TransmitReceiveWithRetry(
+   I2C_HandleTypeDef *hi2c,
+   uint8_t cmd,
+   const uint8_t *tx_payload, uint8_t tx_len,
+   uint8_t *rx_payload, uint8_t *rx_len,  // in: buffer size; out: actual length
+   uint16_t slave_addr);
 
-HAL_StatusTypeDef EPS_I2C_RequestBMSTelemetry(I2C_HandleTypeDef *hi2c,
-                                              uint8_t bms_addr,
-                                              uint8_t *out_buffer,
-                                              uint8_t *out_len);
 
 // CRC-8/MAXIM (Dallas/1-Wire, polynomial 0x31)
 uint8_t EPS_I2C_CRC8(const uint8_t *data, uint8_t len);
