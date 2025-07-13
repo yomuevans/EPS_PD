@@ -32,6 +32,7 @@ extern "C" {
 #define SSP_FRAME_OVERHEAD 8 // DEST, SRC, CMD, D_Len, CRC (2), End Flag
 #define SSP_GD_BLOCK_SIZE 32 // Example block size (adjust as needed)
 #define BMS_MAX_PAYLOAD_LEN 253
+#define MAX_SSP_PAYLOAD_LEN  248  // or whatever max payload size you allow
 
 typedef struct {
     uint8_t module_addr;      // Subsystem module address
@@ -45,7 +46,7 @@ typedef struct {
     uint8_t dest;         // Destination address
     uint8_t cmd;          // Command ID
     uint8_t len;          // Data length
-    uint8_t data[SSP_MAX_DATA_LEN]; // Data payload (includes 2-byte ID + parameter value)
+    uint8_t *data; // Data payload (includes 2-byte ID + parameter value)
     uint16_t crc;         // CRC16
     uint8_t end;          // 0xC0
 } SSP_Frame_t;

@@ -37,7 +37,8 @@ Core/Src/app/fault.o: ../Core/Src/app/fault.c ../Core/Inc/fault.h \
  ../Core/Inc/main.h ../Core/Inc/ssp.h ../Core/Inc/satellite_modes.h \
  ../Core/Inc/i2c_comm.h ../Core/Inc/sync_counter.h \
  ../Core/Inc/telemetry.h ../Core/Inc/eeprom.h ../Core/Inc/log.h \
- ../Core/Inc/fault.h ../Core/Inc/delay.h
+ ../Core/Inc/delay.h ../Core/Inc/eeprom.h ../Core/Inc/sync_counter.h \
+ ../Core/Inc/main.h
 ../Core/Inc/fault.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
 ../Core/Inc/stm32l4xx_hal_conf.h:
@@ -82,5 +83,7 @@ Core/Src/app/fault.o: ../Core/Src/app/fault.c ../Core/Inc/fault.h \
 ../Core/Inc/telemetry.h:
 ../Core/Inc/eeprom.h:
 ../Core/Inc/log.h:
-../Core/Inc/fault.h:
 ../Core/Inc/delay.h:
+../Core/Inc/eeprom.h:
+../Core/Inc/sync_counter.h:
+../Core/Inc/main.h:

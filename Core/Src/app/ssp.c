@@ -7,6 +7,7 @@
 #include "telemetry.h"        // Telemetry structures (e.g., EPSPD_Telemetry) and functions for EPS data
 #include "eeprom.h"           // Functions for reading/writing telemetry and fault logs to EEPROM via I2C
 #include "fault.h"            // Functions for handling and logging faults in the EPS
+#include "i2c_comm.h"        // I2C communication functions for interacting with subsystems like BMS
 #include <string.h>           // Standard C library for memory operations like memcpy (copying data)
 
 // Declare global pointers to store UART and DMA handles for SSP communication
@@ -497,72 +498,64 @@ void SSP_ProcessCommand(SSP_Frame_t *frame) {
             }
             break;
 
-        case SSP_CMD_GD: // Get data (telemetry and fault logs) command
+        case SSP_CMD_GD: // Get data (telemetry and fault logs)
         {
-            // Declare a structure to hold telemetry and timestamp from EEPROM
-            EEPROM_TelemetryWithTimestamp telemetry;
-            // Read the latest telemetry from EEPROM
-            HAL_StatusTypeDef t_status = epspd_ReadTelemetry(ssp_i2c, &telemetry);
+            typedef struct {
+                EPSPD_Telemetry eps_pd_telemetry;
+                EPS_FaultPollSnapshot eps_pd_faults;
+                BMSTelemetryData eps_bms;
+            } EPS_Data;
 
-            // If telemetry read was successful, send it
-            if (t_status == HAL_OK) {
-                // Set reply command to GD
-                reply.cmd = SSP_CMD_GD;
-                // Set data length to size of telemetry structure
-                reply.len = sizeof(EEPROM_TelemetryWithTimestamp);
-                // Copy telemetry data to reply
-                memcpy(reply.data, &telemetry, reply.len);
-                // Send the telemetry reply
-                SSP_SendCommand(huart, hdma_tx, &reply);
-            }
-            // Request BMS telemetry over I2C
-            uint8_t bms_rx[BMS_MAX_PAYLOAD_LEN];   // Maximum 253-byte payload
-            uint8_t bms_rx_len = sizeof(bms_rx);
+            EPS_Data eps_data = {0};  // Zero-init to avoid undefined padding
 
-            // Transmit CMD_READ_TELEMETRY, expect response
-            if (EPS_I2C_TransmitReceiveWithRetry(ssp_i2c,
-                                                 CMD_GET_TELEMETRY,
-                                                 NULL, 0,  // No TX payload
-                                                 bms_rx, &bms_rx_len,
-                                                 EPS_BMS_I2C_ADDR) == HAL_OK)
-            {
-                // Build the SSP reply with BMS telemetry data
-                reply.cmd = SSP_CMD_GD;
-                reply.len = bms_rx_len;
-                memcpy(reply.data, bms_rx, bms_rx_len);
-                SSP_SendCommand(huart, hdma_tx, &reply);
-            }
-            else
-            {
-                // If BMS I2C read fails after retries, send NACK
-                reply.cmd = SSP_CMD_NACK;
-                reply.len = 1;
-                reply.data[0] = frame->cmd;
-                SSP_SendCommand(huart, hdma_tx, &reply);
-                break;  // Abort this switch case path
+            // Fetch current EPS telemetry
+            eps_data.eps_pd_telemetry = *EPSPD_GetTelemetry();
+
+            // Fetch current faults
+            uint8_t fault_count = 0;
+            eps_data.eps_pd_faults = *EPS_GetAllPolledFaults(&fault_count);
+
+            // Fetch BMS telemetry over I2C
+            if (EPS_I2C_RequestTelemetry(&hi2c3, EPS_BMS_I2C_ADDR, &eps_data.eps_bms) != HAL_OK) {
+                EPS_Log_Message(EPS_LOG_ERROR, "BMS telemetry fetch failed.");
+                // Optional: zero out eps_bms to prevent sending garbage
+                memset(&eps_data.eps_bms, 0, sizeof(BMSTelemetryData));
             }
 
+            // Chunked transmission
+            uint8_t *raw_payload = (uint8_t *)&eps_data;
+            uint16_t total_len = sizeof(EPS_Data);
+            uint16_t offset = 0;
+            uint8_t frame_index = 0;
 
-            // Get the number of fault logs stored in EEPROM
-            uint8_t count = EPS_GetFaultLogCount();
-            // Loop through each fault log
-            for (uint8_t i = 0; i < count; i++) {
-                // Declare a structure to hold a fault log
-                EEPROM_FaultLog log;
-                // Read the fault log from EEPROM
-                if (EPS_ReadFaultLog(ssp_i2c, i, &log) != HAL_OK) break;
+            while (offset < total_len) {
+                SSP_Frame_t frame = {
+                    .src  = ADDR_EPS,
+                    .dest = ADDR_OBC,
+                    .cmd  = SSP_CMD_GD
+                };
 
-                // Set reply command to GD (same as telemetry)
-                reply.cmd = SSP_CMD_GD; // same command code for logs
-                // Set data length to size of fault log
-                reply.len = sizeof(EEPROM_FaultLog);
-                // Copy fault log to reply
-                memcpy(reply.data, &log, reply.len);
-                // Send the fault log reply
-                SSP_SendCommand(huart, hdma_tx, &reply);
+                uint8_t chunk_len = (total_len - offset > MAX_SSP_PAYLOAD_LEN)
+                                    ? MAX_SSP_PAYLOAD_LEN
+                                    : (total_len - offset);
+
+                frame.len = chunk_len;
+                frame.data = &raw_payload[offset];
+
+                EPS_Log_Message(EPS_LOG_DEBUG,
+                    "[SSP] Frame %u: Offset=%u, Len=%u", frame_index, offset, chunk_len);
+
+                if (SSP_SendCommand(huart, hdma_tx, &frame) != HAL_OK) {
+                    EPS_Log_Message(EPS_LOG_ERROR, "[SSP] Send failed at frame %u", frame_index);
+                    break;
+                }
+
+                offset += chunk_len;
+                frame_index++;
             }
         }
         break;
+
 
         case SSP_CMD_KEN: // Keep-alive enable command
         {

@@ -24,11 +24,10 @@
 
 
 // Define a static EPSPD_Telemetry structure to store telemetry data
-static EPSPD_Telemetry TelemetryData = {
+static EPSPD_Telemetry EPSPDTelemetryData = {
     .Bus12V = 0,     // 12V bus voltage (mV), initialized to 0
     .Bus5V = 0,      // 5V bus voltage (mV), initialized to 0
     .Bus3V3 = 0,     // 3.3V bus voltage (mV), initialized to 0
-    .subtick_us = 0  // Subtick timestamp (microseconds), initialized to 0
 };
 
 // Define an array of EPSPD_Parameter structures for telemetry parameters
@@ -98,14 +97,13 @@ void EPSPD_UpdateTelemetryAndParameters(I2C_HandleTypeDef *hi2c, uint16_t *adc_v
     // Get the sync counter and subtick timestamp from the BMS (via sync_counter.h)
     GetSyncTimestamp(&counter, &subtick);
     // Store subtick in telemetry (microseconds)
-    TelemetryData.subtick_us = subtick;
 
     // Update 12V bus voltage (mV) from ADC channel 13
-    TelemetryData.Bus12V = (uint16_t)(adc_values[13] * VOLTAGE_PER_COUNT);
+    EPSPDTelemetryData.Bus12V = (uint16_t)(adc_values[13] * VOLTAGE_PER_COUNT);
     // Update 5V bus voltage (mV) from ADC channel 1
-    TelemetryData.Bus5V = (uint16_t)(adc_values[1] * VOLTAGE_PER_COUNT);
+    EPSPDTelemetryData.Bus5V = (uint16_t)(adc_values[1] * VOLTAGE_PER_COUNT);
     // Update 3.3V bus voltage (mV) from ADC channel 10
-    TelemetryData.Bus3V3 = (uint16_t)(adc_values[10] * VOLTAGE_PER_COUNT);
+    EPSPDTelemetryData.Bus3V3 = (uint16_t)(adc_values[10] * VOLTAGE_PER_COUNT);
 
     // Select multiplexer channel 0 for solar array 1 current
     SelectMultiplexerChannel(0);
@@ -193,13 +191,13 @@ void EPSPD_UpdateTelemetryAndParameters(I2C_HandleTypeDef *hi2c, uint16_t *adc_v
     Parameters[15].Value = (uint16_t)((v_imon / 1000.0) * IMON_CURRENT_PER_VOLT);
 
     // Copy bus voltages to parameter array for consistency
-    Parameters[0].Value = TelemetryData.Bus12V;
-    Parameters[1].Value = TelemetryData.Bus5V;
-    Parameters[2].Value = TelemetryData.Bus3V3;
+    Parameters[0].Value = EPSPDTelemetryData.Bus12V;
+    Parameters[1].Value = EPSPDTelemetryData.Bus5V;
+    Parameters[2].Value = EPSPDTelemetryData.Bus3V3;
 
     // Prepare EEPROM data structure with telemetry and timestamp
     EEPROM_TelemetryWithTimestamp eeprom_data;
-    eeprom_data.telemetry = TelemetryData;
+    eeprom_data.telemetry = EPSPDTelemetryData;
     eeprom_data.counter = counter;
     eeprom_data.subtick_us = subtick;
     // Save telemetry to EEPROM via I2C
@@ -217,7 +215,7 @@ void EPSPD_UpdateTelemetryAndParameters(I2C_HandleTypeDef *hi2c, uint16_t *adc_v
 EPSPD_Telemetry* EPSPD_GetTelemetry(void)
 {
     // Return a pointer to the global TelemetryData structure
-    return &TelemetryData;
+    return &EPSPDTelemetryData;
 }
 
 // Function: EPSPD_GetParameters

@@ -53,7 +53,7 @@ void EPS_Log_Telemetry(EPS_LogLevel level, const EPSPD_Telemetry *telemetry) {
     if (level > current_log_level || level == EPS_LOG_OFF) return;
 
     EPS_Log_Message(level, "Telemetry - 12V: %umV, 5V: %umV, 3.3V: %umV, Subtick: %luus\n",
-                    telemetry->Bus12V, telemetry->Bus5V, telemetry->Bus3V3, telemetry->subtick_us);
+                    telemetry->Bus12V, telemetry->Bus5V, telemetry->Bus3V3);
 }
 
 void EPS_Log_ParameterDump(EPS_LogLevel level, const EPSPD_Parameter *params, uint8_t count) {

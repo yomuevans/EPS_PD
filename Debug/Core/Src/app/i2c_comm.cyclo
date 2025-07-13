@@ -1,3 +1,5 @@
-../Core/Src/app/i2c_comm.c:18:9:EPS_I2C_CRC8	4
-../Core/Src/app/i2c_comm.c:38:19:EPS_I2C_TransmitReceiveWithRetry	11
-../Core/Src/app/i2c_comm.c:102:19:EPS_I2C_SendSyncCounter	1
+../Core/Src/app/i2c_comm.c:14:9:EPS_I2C_CRC8	4
+../Core/Src/app/i2c_comm.c:27:19:EPS_I2C_TransmitReceiveWithRetry	16
+../Core/Src/app/i2c_comm.c:107:19:EPS_I2C_SendCommand	4
+../Core/Src/app/i2c_comm.c:140:19:EPS_I2C_RequestTelemetry	4
+../Core/Src/app/i2c_comm.c:168:19:EPS_I2C_SendSyncCounter	1

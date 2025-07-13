@@ -3,9 +3,14 @@
 #include <string.h>
 
 #include "fault.h"
+#include "eeprom.h"
+#include "sync_counter.h"
+#include "main.h"
 
 #define EEPROM_ADDR (epspd_I2C_ADDR_MEMORY << 1)
 #define FAULT_LOG_SIZE sizeof(EEPROM_FaultLog)
+#define NUM_FAULTS (sizeof(fault_config) / sizeof(FaultConfig))
+
 
 typedef struct {
     GPIO_TypeDef* fault_port;
@@ -32,18 +37,21 @@ static FaultConfig fault_config[] = {
     {XB12V_FLT_GPIO_Port,   XB12V_FLT_Pin,   XB12V_EN_GPIO_Port,  XB12V_EN_Pin,  "XB12V",   0x07},
 };
 
+
 typedef struct {
     bool is_active;
     uint8_t retry_count;
     uint32_t last_fault_time;
 } FaultState;
 
-static FaultState fault_states[sizeof(fault_config) / sizeof(FaultConfig)];
+static FaultState fault_states[NUM_FAULTS];
+static EPS_FaultPollSnapshot fault_snapshot[NUM_FAULTS];
 static uint8_t fault_log_index = 0;
 
-void EPS_LogFault(I2C_HandleTypeDef *hi2c, const char *desc, uint8_t subsystem_id, uint8_t retry_count) {
+EEPROM_FaultLog EPS_LogFault(I2C_HandleTypeDef *hi2c, const char *desc, uint8_t subsystem_id, uint8_t retry_count) {
     EEPROM_FaultLog log;
     memset(&log, 0, sizeof(log));
+
     log.subsystem_id = subsystem_id;
     log.retry_count = retry_count;
     strncpy(log.description, desc, FAULT_DESC_LEN - 1);
@@ -59,6 +67,8 @@ void EPS_LogFault(I2C_HandleTypeDef *hi2c, const char *desc, uint8_t subsystem_i
         SoftwareDelay(4);
         fault_log_index = (fault_log_index + 1) % MAX_FAULT_LOGS;
     }
+
+    return log;
 }
 
 void Fault_PollAndHandle(I2C_HandleTypeDef *hi2c, UART_HandleTypeDef *huart_log) {
@@ -67,8 +77,14 @@ void Fault_PollAndHandle(I2C_HandleTypeDef *hi2c, UART_HandleTypeDef *huart_log)
     for (uint8_t i = 0; i < sizeof(fault_config)/sizeof(FaultConfig); ++i) {
         GPIO_PinState state = HAL_GPIO_ReadPin(fault_config[i].fault_port, fault_config[i].fault_pin);
 
+        fault_snapshot[i].subsystem_id = fault_config[i].subsystem_id;
+        strncpy(fault_snapshot[i].description, fault_config[i].description, FAULT_DESC_LEN - 1);
+        fault_snapshot[i].description[FAULT_DESC_LEN - 1] = '\0';
+        fault_snapshot[i].is_active = fault_states[i].is_active;
+        fault_snapshot[i].retry_count = fault_states[i].retry_count;
+        fault_snapshot[i].last_fault_time = fault_states[i].last_fault_time;
+
         if (state == GPIO_PIN_RESET && !fault_states[i].is_active) {
-            // Fault detected
             fault_states[i].is_active = true;
             fault_states[i].retry_count = 0;
             fault_states[i].last_fault_time = now;
@@ -119,4 +135,9 @@ HAL_StatusTypeDef EPS_ReadFaultLog(I2C_HandleTypeDef *hi2c, uint8_t index, EEPRO
 
 uint8_t EPS_GetFaultLogCount(void) {
     return MAX_FAULT_LOGS;
+}
+
+const EPS_FaultPollSnapshot* EPS_GetAllPolledFaults(uint8_t *count) {
+    if (count) *count = sizeof(fault_config) / sizeof(FaultConfig);
+    return fault_snapshot;
 }

@@ -124,18 +124,18 @@ HAL_StatusTypeDef epspd_WriteTelemetry(I2C_HandleTypeDef *hi2c, EEPROM_Telemetry
     buffer[5] = telemetry->telemetry.Bus5V;
     buffer[6] = telemetry->telemetry.Bus3V3 >> 8;
     buffer[7] = telemetry->telemetry.Bus3V3;
-    buffer[8] = telemetry->telemetry.subtick_us >> 24;
-    buffer[9] = telemetry->telemetry.subtick_us >> 16;
-    buffer[10] = telemetry->telemetry.subtick_us >> 8;
-    buffer[11] = telemetry->telemetry.subtick_us;
-    buffer[12] = telemetry->counter >> 56;
-    buffer[13] = telemetry->counter >> 48;
-    buffer[14] = telemetry->counter >> 40;
-    buffer[15] = telemetry->counter >> 32;
-    buffer[16] = telemetry->counter >> 24;
-    buffer[17] = telemetry->counter >> 16;
-    buffer[18] = telemetry->counter >> 8;
-    buffer[19] = telemetry->counter;
+//    buffer[8] = telemetry->telemetry.subtick_us >> 24;
+//    buffer[9] = telemetry->telemetry.subtick_us >> 16;
+//    buffer[10] = telemetry->telemetry.subtick_us >> 8;
+//    buffer[11] = telemetry->telemetry.subtick_us;
+//    buffer[12] = telemetry->counter >> 56;
+//    buffer[13] = telemetry->counter >> 48;
+//    buffer[14] = telemetry->counter >> 40;
+//    buffer[15] = telemetry->counter >> 32;
+//    buffer[16] = telemetry->counter >> 24;
+//    buffer[17] = telemetry->counter >> 16;
+//    buffer[18] = telemetry->counter >> 8;
+//    buffer[19] = telemetry->counter;
 
     HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(hi2c, epspd_I2C_ADDR_MEMORY << 1, buffer, 20, 100);
     if (status == HAL_OK) {

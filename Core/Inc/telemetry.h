@@ -38,7 +38,7 @@ typedef struct {
     uint16_t Bus12V;
     uint16_t Bus5V;
     uint16_t Bus3V3;
-    uint32_t subtick_us; // Added microseconds since last sync pulse
+    //uint32_t subtick_us; // Added microseconds since last sync pulse
 } EPSPD_Telemetry;
 
 typedef struct {
